@@ -1,4 +1,4 @@
-module "pic-to-s3-vpc" {
+module "serverless-vpc" {
   source = "./modules/vpc"
 
   vpc_cidr = "10.0.0.0/16"
@@ -15,7 +15,7 @@ module "pic-to-s3-vpc" {
 
 }
 
-module "serverless" {
+module "serverless-app" {
   source = "./modules/apigtw-lambda-s3"
 
   lambda_name       = "api-to-s3-lambda"
@@ -23,16 +23,17 @@ module "serverless" {
   lambda_source_dir = "../lambda/"
   lambda_output_dir = "../lambda/lambda.zip"
 
-  vpc_id     = module.pic-to-s3-vpc.vpc_id
-  subnet_ids = module.pic-to-s3-vpc.private_subnet_ids
+  vpc_id     = module.serverless-vpc.vpc_id
+  vpc_cidr   = "10.0.0.0/16"
+  subnet_ids = module.serverless-vpc.private_subnet_ids
 }
 
-# Optional
+# Optional Configure custom domain
 # module "custom_domain" {
 #   source              = "./modules/api-route53-certs"
 
 #   api_gtw_id = module.serverless.api_id
-#   custom_domain_name  = "test.gabaltech.co.uk"
+#   custom_domain_name  = "YOUR_CUSTOM_DOMAIN"
 #   create_route53_record = true
-#   hosted_zone_id      = "Z01517093AJJC8T5LXDV3"
+#   hosted_zone_id      = "YOUR_CUSTOM_DOMAIN_HOSTED_ZONE_ID"
 # }

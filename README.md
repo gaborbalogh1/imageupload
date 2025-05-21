@@ -48,3 +48,7 @@
 ![alt text](docs/image-2.png)
 
 ![alt text](docs/image-4.png)
+
+# Example Files in bucket after PUT method Execution
+
+![alt text](docs/image-5.png)

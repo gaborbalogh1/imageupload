@@ -12,6 +12,18 @@ data "aws_iam_policy_document" "lambda_s3_put_only" {
       "${aws_s3_bucket.lambda_bucket.arn}/*"
     ]
   }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.ssec_only_bucket.arn
+    ]
+  }
 }
 
 resource "aws_iam_role" "lambda_exec_role" {
@@ -44,9 +56,34 @@ resource "aws_iam_role_policy_attachment" "lambda_s3_put_only_attach" {
   policy_arn = aws_iam_policy.lambda_s3_put_only.arn
 }
 
+resource "aws_kms_key" "ssec_only_bucket" {
+  description             = "This key is used to encrypt bucket objects"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+}
+
 
 resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.lambda_name}-bucket-${random_id.suffix.hex}"
+}
+
+resource "aws_s3_bucket_public_access_block" "block_public_acls" {
+  bucket                  = aws_s3_bucket.lambda_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "ssec_only_bucket_encryption" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.ssec_only_bucket.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
 }
 
 resource "random_id" "suffix" {
@@ -64,7 +101,14 @@ resource "aws_lambda_function" "api_handler" {
   role          = aws_iam_role.lambda_exec_role.arn
   runtime       = var.lambda_runtime
   handler       = var.lambda_handler
+  timeout       = 10
   filename      = data.archive_file.lambda_zip.output_path
+
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -78,16 +122,25 @@ resource "aws_lambda_function" "api_handler" {
   }
 }
 
+data "aws_prefix_list" "s3" {
+  name = "com.amazonaws.eu-west-2.s3"
+}
+
 resource "aws_security_group" "lambda_sg" {
   name        = "${var.lambda_name}-sg"
-  description = "Allow Lambda VPC traffic"
+  description = "Allow Lambda to access S3 via VPC endpoint"
   vpc_id      = var.vpc_id
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    description     = "This allows Lambda to send HTTPS requests through the VPC"
+    prefix_list_ids = [data.aws_prefix_list.s3.id]
+  }
+
+  tags = {
+    Name = "${var.lambda_name}-sg"
   }
 }
 
@@ -114,7 +167,53 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.http_api.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw_access_logs.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+    })
+  }
 }
+
+resource "aws_cloudwatch_log_group" "api_gw_access_logs" {
+  name              = "/aws/api-gateway/upload-api-access-logs"
+  retention_in_days = 14 # Optional: keeps logs for 14 days
+
+  #kms_key_id = aws_kms_key.cloudwatch_logs.key_id
+}
+
+# resource "aws_kms_key" "cloudwatch_logs" {
+#   description             = "CMK for API Gateway access logs"
+#   deletion_window_in_days = 10
+
+#   enable_key_rotation = true
+# }
+
+resource "aws_cloudwatch_log_resource_policy" "api_gw_policy" {
+  policy_name = "ApiGwLogsPolicy"
+  policy_document = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Action   = "logs:PutLogEvents"
+        Resource = [aws_cloudwatch_log_group.api_gw_access_logs.arn]
+      }
+    ]
+  })
+}
+
 
 resource "aws_lambda_permission" "apigw_invoke" {
   statement_id  = "AllowAPIGatewayInvoke"

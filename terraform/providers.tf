@@ -14,6 +14,14 @@ terraform {
     }
   }
   required_version = ">=1.2.0"
+
+  backend "s3" {
+    bucket = "imageuploadbucket-12345"
+    key    = "terraform-image-upload"
+    region = "eu-west-2"
+
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
@@ -25,4 +33,5 @@ provider "aws" {
       Project     = "APIGTW-LAMBDA-S3"
     }
   }
+
 }
