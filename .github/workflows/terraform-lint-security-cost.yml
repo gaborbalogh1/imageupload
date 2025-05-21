@@ -25,14 +25,13 @@ jobs:
         run: tflint --init && tflint --recursive
 
       # ----- Security -----
-      - name: Run Trivy vulnerability scanner in fs mode
+      - name: Scan Terraform files with Trivy
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH
+
 
       # ----- Terraform Init & Plan -----
       - name: Terraform Init
