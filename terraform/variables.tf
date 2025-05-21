@@ -1,3 +1,4 @@
+#Variables for deployment
 variable "region" {
   description = "Deployment region"
   default     = "eu-west-2"
