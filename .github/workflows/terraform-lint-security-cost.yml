@@ -1,6 +1,10 @@
 name: Terraform Lint, Security, Plan & Cost
 
 on:
+  push:
+    paths:
+      - '**.tf'
+      - '.github/workflows/terraform-lint-security-plan-cost.yml'
   pull_request:
     paths:
       - '**.tf'
