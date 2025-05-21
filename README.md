@@ -3,6 +3,8 @@ Deploy a Serverless stack to process picture upload to s3 bucket
 
 # Pre requisite
 # Install terraform
+chmod +x install.sh
+sudo ./install.sh
 
 # Validate installation
 terraform -version

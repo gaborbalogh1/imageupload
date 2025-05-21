@@ -1,3 +1,19 @@
+data "aws_iam_policy_document" "lambda_s3_put_only" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:PutObjectAcl",
+    ]
+
+    resources = [
+      "${aws_s3_bucket.lambda_bucket.arn}",
+      "${aws_s3_bucket.lambda_bucket.arn}/*"
+    ]
+  }
+}
+
 resource "aws_iam_role" "lambda_exec_role" {
   name = "${var.lambda_name}-exec-role"
   assume_role_policy = jsonencode({
@@ -17,10 +33,17 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_s3" {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+resource "aws_iam_policy" "lambda_s3_put_only" {
+  name        = "LambdaS3PutOnlyPolicy"
+  description = "Allow Lambda to put objects and set ACLs in a specific S3 bucket"
+  policy      = data.aws_iam_policy_document.lambda_s3_put_only.json
 }
+
+resource "aws_iam_role_policy_attachment" "lambda_s3_put_only_attach" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = aws_iam_policy.lambda_s3_put_only.arn
+}
+
 
 resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.lambda_name}-bucket-${random_id.suffix.hex}"
