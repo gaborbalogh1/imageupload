@@ -24,7 +24,6 @@ module "serverless-app" {
   lambda_output_dir = "../lambda/lambda.zip"
 
   vpc_id     = module.serverless-vpc.vpc_id
-  vpc_cidr   = "10.0.0.0/16"
   subnet_ids = module.serverless-vpc.private_subnet_ids
 }
 

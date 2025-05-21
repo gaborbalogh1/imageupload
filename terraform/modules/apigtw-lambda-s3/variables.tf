@@ -31,8 +31,3 @@ variable "lambda_output_dir" {
   description = "output path of the lambda function"
   type        = string
 }
-
-variable "vpc_cidr" {
-  description = "VPC CIDR for the lambda function security group"
-  type        = string
-}
