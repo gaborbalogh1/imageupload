@@ -31,12 +31,12 @@ module "serverless" {
 
 }
 
+# Optional
+# module "custom_domain" {
+#   source              = "./modules/api-route53-certs"
 
-module "custom_domain" {
-  source              = "./modules/api-route53-certs"
-
-  api_gtw_id = module.serverless.api_id
-  custom_domain_name  = "test.gabaltech.co.uk"
-  create_route53_record = true
-  hosted_zone_id      = "Z01517093AJJC8T5LXDV3"
-}
+#   api_gtw_id = module.serverless.api_id
+#   custom_domain_name  = "test.gabaltech.co.uk"
+#   create_route53_record = true
+#   hosted_zone_id      = "Z01517093AJJC8T5LXDV3"
+# }

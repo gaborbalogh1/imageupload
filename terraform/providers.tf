@@ -17,5 +17,4 @@ provider "aws" {
       Project     = "APIGTW-LAMBDA-S3"
     }
   }
-  #optional remove for cicd
 }
