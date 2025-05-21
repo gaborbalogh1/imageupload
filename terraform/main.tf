@@ -1,7 +1,6 @@
 module "pic-to-s3-vpc" {
   source = "./modules/vpc"
 
-  region   = "eu-west-2"
   vpc_cidr = "10.0.0.0/16"
 
   public_subnets = {
