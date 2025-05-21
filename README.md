@@ -1,4 +1,4 @@
-![alt text](image.png)
+![alt text](docs/image.png)
 
 # Prerequisite
 - Install terraform
@@ -35,16 +35,16 @@
 
 # Deploy a VPC
 
-![alt text](vpc_networking_diagram.png)
+![alt text](docs/vpc_networking_diagram.png)
 
 # Deploy base infrastructure
 
-![alt text](image-1.png)
+![alt text](docs/image-1.png)
 
 # Upload a file after the deployment is completed using POSTMAN
 
-![alt text](image-3.png)
+![alt text](docs/image-3.png)
 
-![alt text](image-2.png)
+![alt text](docs/image-2.png)
 
-![alt text](image-4.png)
+![alt text](docs/image-4.png)
