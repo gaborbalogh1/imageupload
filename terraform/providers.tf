@@ -20,7 +20,7 @@ terraform {
     key    = "terraform-image-upload"
     region = "eu-west-2"
 
-    use_lockfile = true
+    #use_lockfile = true
   }
 }
 
