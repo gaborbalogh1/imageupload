@@ -8,7 +8,7 @@ data "aws_iam_policy_document" "lambda_s3_put_only" {
     ]
 
     resources = [
-      "${aws_s3_bucket.lambda_bucket.arn}",
+      aws_s3_bucket.lambda_bucket.arn,
       "${aws_s3_bucket.lambda_bucket.arn}/*"
     ]
   }

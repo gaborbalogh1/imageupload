@@ -19,16 +19,13 @@ module "pic-to-s3-vpc" {
 module "serverless" {
   source = "./modules/apigtw-lambda-s3"
 
-  region            = "eu-west-2"
   lambda_name       = "api-to-s3-lambda"
   lambda_runtime    = "python3.11"
   lambda_source_dir = "../lambda/"
   lambda_output_dir = "../lambda/lambda.zip"
 
-  vpc_id            = module.pic-to-s3-vpc.vpc_id
-  subnet_ids        = module.pic-to-s3-vpc.private_subnet_ids
-  public_subnet_ids = module.pic-to-s3-vpc.public_subnet_ids
-
+  vpc_id     = module.pic-to-s3-vpc.vpc_id
+  subnet_ids = module.pic-to-s3-vpc.private_subnet_ids
 }
 
 # Optional

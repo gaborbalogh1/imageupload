@@ -4,12 +4,6 @@ variable "custom_domain_name" {
   default     = ""
 }
 
-variable "acm_certificate_arn" {
-  description = "ACM certificate ARN for the custom domain"
-  type        = string
-  default     = ""
-}
-
 variable "create_route53_record" {
   type    = bool
   default = false
