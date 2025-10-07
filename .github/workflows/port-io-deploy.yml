@@ -11,6 +11,10 @@ on:
         description: "AWS region"
         required: true
         default: "eu-west-1"
+      port_context:
+        description: "Metadata from Port.io"
+        required: false
+        default: "{}"
 
 jobs:
   deploy:
