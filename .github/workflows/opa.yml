@@ -1,4 +1,4 @@
-name: Terraform Lint, Security, Plan, Policy & Cost, OPA Policies
+name: Terraform Lint, Security, Plan, Policy & Cost, OPA policies
 
 on: [push]
 
@@ -80,23 +80,23 @@ jobs:
             --out-file=/tmp/infracost.json
 
       - name: Install OPA
-            run: |
-              curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
-              chmod 755 ./opa
-              sudo mv opa /usr/local/bin/
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod 755 ./opa
+          sudo mv opa /usr/local/bin/
 
-          - name: Evaluate Rego Policies
-            id: evaluate_policies
-            run: |
-            EXIT_CODE=0
-            conftest test /home/runner/work/terraform-opa-testing/terraform-opa-testing/plan.json -o table --all-namespaces -p policy/ || EXIT_CODE=$?
-            echo "::set-output name=exit_code::$EXIT_CODE"
+      - name: Evaluate Rego Policies
+        id: evaluate_policies
+        run: |
+          EXIT_CODE=0
+          conftest test /home/runner/work/terraform-opa-testing/terraform-opa-testing/plan.json -o table --all-namespaces -p policy/ || EXIT_CODE=$?
+          echo "::set-output name=exit_code::$EXIT_CODE"
 
-          - name: OPA Rules Evaluation Failed
-            if: ${{ steps.evaluate_policies.outputs.exit_code != 0 }}
-            run: |
-            echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
-            exit 1
+      - name: OPA Rules Evaluation Failed
+        if: ${{ steps.evaluate_policies.outputs.exit_code != 0 }}
+        run: |
+          echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
+          exit 1
 
           # - name: Terraform Apply
           #   if: steps.evaluate_policies.outputs.exit_code == 0
