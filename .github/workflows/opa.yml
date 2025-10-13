@@ -98,7 +98,7 @@ jobs:
         id: evaluate_policies
         run: |
           EXIT_CODE=0
-          - name: Run OPA Policy Checks
+      - name: Run OPA Policy Checks
         run: |
           mkdir -p policy
           cd ./terraform
