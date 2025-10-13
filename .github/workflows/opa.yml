@@ -1,4 +1,4 @@
-name: Terraform Lint, Security, Plan, Policy & Cost
+name: Terraform Lint, Security, Plan, Policy & Cost, OPA Policies
 
 on: [push]
 
