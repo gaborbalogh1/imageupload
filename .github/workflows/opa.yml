@@ -98,7 +98,7 @@ jobs:
         id: evaluate_policies
         run: |
           cd ./terraform
-          conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
+          conftest test tfplan.json --policy ./policies/policy || echo "OPA Policy Violations Found"
           echo "::set-output name=exit_code::$EXIT_CODE"
 
       - name: Comment OPA results
@@ -120,7 +120,7 @@ jobs:
         run: |
           echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
           exit 1
-          
+
           # - name: Terraform Apply
           #   if: steps.evaluate_policies.outputs.exit_code == 0
           #   run: terraform apply -auto-approve
