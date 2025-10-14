@@ -102,9 +102,16 @@ jobs:
           terraform init && terraform plan -out=tfplan && terraform show -json ./tfplan > tfplan.json
           #conftest test ./tfplan.json -p ./policies || echo "OPA Policy Violations Found"
           opa exec --decision terraform/analysis/authz --bundle policies/ tfplan.json || echo "OPA Policy Violations Found"
+          opa exec --decision terraform/analysis/score --bundle policies/ tfplan.json || echo "OPA Policy Confidence to low"
           #conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
           echo "::set-output name=exit_code::$EXIT_CODE"
 
+      - name: OPA Rules Evaluation Failed
+        if: ${{ steps.evaluate_policies.outputs.exit_code != 0 }}
+        run: |
+          echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
+          exit 1
+          
       - name: Comment OPA results
         if: failure()
         uses: actions/github-script@v7
@@ -118,12 +125,6 @@ jobs:
               repo: context.repo.repo,
               body: `🛑 **OPA Policy Violations**\n\n\`\`\`\n${result}\n\`\`\``
             })
-
-      - name: OPA Rules Evaluation Failed
-        if: ${{ steps.evaluate_policies.outputs.exit_code != 0 }}
-        run: |
-          echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
-          exit 1
 
           # - name: Terraform Apply
           #   if: steps.evaluate_policies.outputs.exit_code == 0
