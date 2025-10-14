@@ -1,7 +1,13 @@
 package terraform.deny
 
-deny[msg] {
-  input.resource_changes[_].type == "aws_s3_bucket"
-  not input.resource_changes[_].change.after.acl == "private"
-  msg = "S3 bucket must have ACL set to private"
-}
+deny[msg] { msg := data.terraform.aws_s3.deny[_] }
+deny[msg] { msg := data.terraform.aws_sg.deny[_] }
+deny[msg] { msg := data.terraform.aws_iam.deny[_] }
+deny[msg] { msg := data.terraform.aws_ebs.deny[_] }
+deny[msg] { msg := data.terraform.aws_rds.deny[_] }
+deny[msg] { msg := data.terraform.aws_lambda.deny[_] }
+deny[msg] { msg := data.terraform.aws_serverless.deny[_] }
+deny[msg] { msg := data.terraform.aws_cicd.deny[_] }
+deny[msg] { msg := data.terraform.aws_ssm.deny[_] }
+deny[msg] { msg := data.terraform.aws_asg.deny[_] }
+
