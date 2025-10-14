@@ -99,9 +99,10 @@ jobs:
         run: |
           # run fresh plan
           cd ./terraform
-          terraform init && terraform plan -out=tfplan.json
-          terraform show -json tfplan.json
-          conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
+          terraform init && terraform plan -out=tfplan && terraform show -json ./tfplan > tfplan.json
+          conftest test ./tfplan.json -p ./policies || echo "OPA Policy Violations Found"
+          #opa exec --decision terraform/analysis/authz --bundle policies/ tfplan.json || echo "OPA Policy Violations Found"
+          #conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
           echo "::set-output name=exit_code::$EXIT_CODE"
 
       - name: Comment OPA results
