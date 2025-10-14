@@ -58,13 +58,16 @@ jobs:
 
       # ----- Terraform Init & Plan -----
       - name: Terraform Init
-        run: cd ./terraform && terraform init
+        working-directory: ./terraform
+        run: terraform init
 
       - name: Terraform Plan
-        run: cd ./terraform && terraform plan -out=tfplan.binary -no-color
+        working-directory: ./terraform
+        run: terraform plan -out=tfplan.binary -no-color
 
       - name: Save Terraform Plan Output
-        run: cd ./terraform && terraform show -json tfplan.binary > tfplan.json
+        working-directory: ./terraform
+        run: terraform show -json tfplan.binary > tfplan.json
 
       # ----- Infracost Setup -----
       - name: Setup Infracost
@@ -97,35 +100,46 @@ jobs:
       - name: Run OPA Policy Checks
         id: evaluate_policies
         run: |
-          # run fresh plan
+          set -e
           cd ./terraform
-          terraform init && terraform plan -out=tfplan && terraform show -json ./tfplan > tfplan.json
-          #conftest test ./tfplan.json -p ./policies || echo "OPA Policy Violations Found"
-          opa exec --decision terraform/analysis/authz --bundle policies/ tfplan.json || echo "OPA Policy Violations Found"
-          opa exec --decision terraform/analysis/score --bundle policies/ tfplan.json || echo "OPA Policy Confidence to low"
-          #conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
-          echo "::set-output name=exit_code::$EXIT_CODE"
+          terraform init -input=false
+          terraform plan -out=tfplan
+          terraform show -json ./tfplan > tfplan.json
 
+          echo "Running OPA policy checks..."
+          set +e
+          opa exec --decision terraform/analysis/authz --bundle ../policies/ tfplan.json
+          AUTHZ_EXIT_CODE=$?
+          opa exec --decision terraform/analysis/score --bundle ../policies/ tfplan.json
+          SCORE_EXIT_CODE=$?
+          set -e
+
+          echo "authz_exit_code=$AUTHZ_EXIT_CODE" >> $GITHUB_ENV
+          echo "score_exit_code=$SCORE_EXIT_CODE" >> $GITHUB_ENV
+
+      # ----- Conditional OPA Failure -----
       - name: OPA Rules Evaluation Failed
-        if: ${{ steps.evaluate_policies.outputs.exit_code != 0 }}
+        if: ${{ env.authz_exit_code != '0' || env.score_exit_code != '0' }}
         run: |
-          echo "The terraform resources you are deploying on the AWS Account are not complying with the defined standard. Please check the "Evaluate Rego Policies" to find the configuration which is not compliant and fix the code. "
+          echo "❌ OPA policy checks failed."
+          echo "The Terraform resources you are deploying do not comply with OPA policies."
           exit 1
           
+      # ----- Comment OPA Results -----
       - name: Comment OPA results
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const result = fs.readFileSync('conftest_output.txt', 'utf8');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🛑 **OPA Policy Violations**\n\n\`\`\`\n${result}\n\`\`\``
+              body: "🛑 **OPA Policy Violations Detected**\n\nYour Terraform plan failed policy checks. Please review the OPA policy results in the workflow logs and address the issues."
             })
 
-          # - name: Terraform Apply
-          #   if: steps.evaluate_policies.outputs.exit_code == 0
-          #   run: terraform apply -auto-approve
+      # ----- Terraform Apply (optional) -----
+      # - name: Terraform Apply
+      #   if: ${{ env.authz_exit_code == '0' && env.score_exit_code == '0' }}
+      #   working-directory: ./terraform
+      #   run: terraform apply -auto-approve
