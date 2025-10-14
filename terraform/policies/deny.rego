@@ -1,13 +1,27 @@
-package terraform.deny
+package policy
 
-deny[msg] { msg := data.terraform.aws_s3.deny[_] }
-deny[msg] { msg := data.terraform.aws_sg.deny[_] }
-deny[msg] { msg := data.terraform.aws_iam.deny[_] }
-deny[msg] { msg := data.terraform.aws_ebs.deny[_] }
-deny[msg] { msg := data.terraform.aws_rds.deny[_] }
-deny[msg] { msg := data.terraform.aws_lambda.deny[_] }
-deny[msg] { msg := data.terraform.aws_serverless.deny[_] }
-deny[msg] { msg := data.terraform.aws_cicd.deny[_] }
-deny[msg] { msg := data.terraform.aws_ssm.deny[_] }
-deny[msg] { msg := data.terraform.aws_asg.deny[_] }
-
+deny[msg] {
+  some p
+  msg := data.aws.ebs.deny[_]
+} else {
+  some p
+  msg := data.aws.rds.deny[_]
+} else {
+  some p
+  msg := data.aws.lambda.deny[_]
+} else {
+  some p
+  msg := data.aws.serverless.deny[_]
+} else {
+  some p
+  msg := data.aws.cicd.deny[_]
+} else {
+  some p
+  msg := data.aws.ssm.deny[_]
+} else {
+  some p
+  msg := data.aws.asg.deny[_]
+} else {
+  some p
+  msg := data.aws.security.deny[_]
+}

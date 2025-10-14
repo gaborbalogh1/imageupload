@@ -1,10 +1,9 @@
-package terraform.aws_lambda
+package aws.lambda
 
 deny[msg] {
-  some i, k
-  input.resource_changes[i].type == "aws_lambda_function"
-  env := input.resource_changes[i].change.after.environment.variables
-  key := object.keys(env)[k]
-  lower(key) == "password" or lower(key) == "secret" or lower(key) == "apikey"
-  msg := sprintf("Lambda '%v' exposes a secret in environment variable '%v'.", [input.resource_changes[i].name, key])
+  fn := input.aws_lambda_function[_]
+  env := fn.environment.variables
+  some k, v
+  lower(k) == "password" or lower(k) == "secret" or lower(k) == "apikey"
+  msg := sprintf("Lambda %s has sensitive env variable: %s", [fn.name, k])
 }

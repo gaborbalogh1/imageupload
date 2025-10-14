@@ -17,3 +17,15 @@ curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/inst
 
 # RUN TFSEC
 # tfsec .
+
+# Install OPA
+curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+chmod +x opa && sudo mv opa /usr/local/bin/opa
+          
+# Install Conftest
+CONTEST_VERSION=$(curl -s https://api.github.com/repos/open-policy-agent/conftest/releases/latest | grep tag_name | cut -d '"' -f 4)
+curl -L -o conftest.tar.gz "https://github.com/open-policy-agent/conftest/releases/download/${CONTEST_VERSION}/conftest_${CONTEST_VERSION#v}_Linux_x86_64.tar.gz"
+tar xzf conftest.tar.gz
+sudo mv conftest /usr/local/bin/conftest
+conftest --version
+opa version
