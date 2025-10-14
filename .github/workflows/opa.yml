@@ -98,7 +98,7 @@ jobs:
         id: evaluate_policies
         run: |
           cd ./terraform
-          conftest test tfplan.json --policy ./policies/policy || echo "OPA Policy Violations Found"
+          conftest test tfplan.json --policy ./policies || echo "OPA Policy Violations Found"
           echo "::set-output name=exit_code::$EXIT_CODE"
 
       - name: Comment OPA results
