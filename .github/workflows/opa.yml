@@ -1,0 +1,145 @@
+name: Terraform Lint, Security, Plan, Policy & Cost, OPA policies
+
+on: [push]
+
+jobs:
+  terraform-checks:
+    name: Terraform Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----- Checkout -----
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # ----- AWS -----
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      # ----- Terraform Setup -----
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.2.0
+
+      # ----- Linting -----
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+      - name: Run TFLint
+        run: tflint --init && tflint --recursive
+
+      # ----- Security -----
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          hide-progress: true
+          output: trivy.txt
+
+      - name: Publish Trivy Output to Summary
+        run: |
+          if [[ -s trivy.txt ]]; then
+            {
+              echo "### Security Output"
+              echo "<details><summary>Click to expand</summary>"
+              echo ""
+              echo '```terraform'
+              cat trivy.txt
+              echo '```'
+              echo "</details>"
+            } >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ----- Terraform Init & Plan -----
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: terraform plan -out=tfplan.binary -no-color
+
+      - name: Save Terraform Plan Output
+        working-directory: ./terraform
+        run: terraform show -json tfplan.binary > tfplan.json
+
+      # ----- Infracost Setup -----
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate Infracost Cost Estimate
+        run: |
+          infracost breakdown \
+            --path=. \
+            --format=json \
+            --out-file=/tmp/infracost.json
+
+      # ----- OPA Policy Check -----
+      - name: Install OPA & Conftest
+        run: |
+          # Install OPA
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa && sudo mv opa /usr/local/bin/opa
+          
+          # Install Conftest
+          CONTEST_VERSION=$(curl -s https://api.github.com/repos/open-policy-agent/conftest/releases/latest | grep tag_name | cut -d '"' -f 4)
+          curl -L -o conftest.tar.gz "https://github.com/open-policy-agent/conftest/releases/download/${CONTEST_VERSION}/conftest_${CONTEST_VERSION#v}_Linux_x86_64.tar.gz"
+          tar xzf conftest.tar.gz
+          sudo mv conftest /usr/local/bin/conftest
+          conftest --version
+          opa version
+
+      - name: Run OPA Policy Checks
+        id: evaluate_policies
+        run: |
+          set -e
+          cd ./terraform
+          terraform init -input=false
+          terraform plan -out=tfplan
+          terraform show -json ./tfplan > tfplan.json
+
+          echo "Running OPA policy checks..."
+          set +e
+          opa exec --decision terraform/analysis/authz --bundle ./policies/ tfplan.json
+          AUTHZ_EXIT_CODE=$?
+          opa exec --decision terraform/analysis/score --bundle ./policies/ tfplan.json
+          SCORE_EXIT_CODE=$?
+          set -e
+
+          echo "authz_exit_code=$AUTHZ_EXIT_CODE" >> $GITHUB_ENV
+          echo "score_exit_code=$SCORE_EXIT_CODE" >> $GITHUB_ENV
+
+      # ----- Conditional OPA Failure -----
+      - name: OPA Rules Evaluation Failed
+        if: ${{ env.authz_exit_code != '0' || env.score_exit_code != '0' }}
+        run: |
+          echo "❌ OPA policy checks failed."
+          echo "The Terraform resources you are deploying do not comply with OPA policies."
+          exit 1
+          
+      # ----- Comment OPA Results -----
+      - name: Comment OPA results
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "🛑 **OPA Policy Violations Detected**\n\nYour Terraform plan failed policy checks. Please review the OPA policy results in the workflow logs and address the issues."
+            })
+
+      # ----- Terraform Apply (optional) -----
+      # - name: Terraform Apply
+      #   if: ${{ env.authz_exit_code == '0' && env.score_exit_code == '0' }}
+      #   working-directory: ./terraform
+      #   run: terraform apply -auto-approve
