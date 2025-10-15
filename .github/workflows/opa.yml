@@ -108,9 +108,9 @@ jobs:
 
           echo "Running OPA policy checks..."
           set +e
-          opa exec --decision terraform/analysis/authz --bundle ../policies/ tfplan.json
+          opa exec --decision terraform/analysis/authz --bundle ./policies/ tfplan.json
           AUTHZ_EXIT_CODE=$?
-          opa exec --decision terraform/analysis/score --bundle ../policies/ tfplan.json
+          opa exec --decision terraform/analysis/score --bundle ./policies/ tfplan.json
           SCORE_EXIT_CODE=$?
           set -e
 
